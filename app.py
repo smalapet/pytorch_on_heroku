@@ -1,4 +1,5 @@
 from flask import Flask,jsonify,request
+from torchvision.utils import save_image
 import io
 import json
 from PIL import Image
@@ -15,14 +16,19 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.',1)[1].lower() in ALLOWED_EXTENSIONS
 
 def image_transformation(image_bytes):
+#    img_transformations = transforms.Compose([transforms.Resize(255),
+#                                            transforms.ToTensor(),
+#                                            transforms.Normalize(
+#                                                (0.2,0.2,0.2),
+#                                                (0.5,0.5,0.5)
+#                                            )])
     img_transformations = transforms.Compose([transforms.Resize(255),
-                                            transforms.ToTensor(),
-                                            transforms.Normalize(
-                                                (0.485,0.456,0.406),
-                                                (0.229,0.224,0.225)
-                                            )])
+                                             transforms.ToTensor()])
     uploaded_image = Image.open(io.BytesIO(image_bytes))
-    return img_transformations(uploaded_image).unsqueeze(0)
+    uploaded_image.save('tmp.jpg')
+    _tensor = img_transformations(uploaded_image).unsqueeze(0)
+    save_image(_tensor[0], 'tmp2.jpg')
+    return _tensor
 
 def prediction(image_bytes):
     tensor = image_transformation(image_bytes)
@@ -32,7 +38,7 @@ def prediction(image_bytes):
     
 @app.route('/', methods=['GET','POST'])
 def index():
-    return ("Welcome to the Deploying a Pytorch model with Flask app")
+    return ("Deploying a Pytorch model with Flask app")
 
 @app.route('/predict', methods=['POST'])
 def predict():
@@ -43,7 +49,7 @@ def predict():
             image_bytes = file.read()
             class_id, class_name = prediction(image_bytes)
             return jsonify({'class id': class_id, 'class name': class_name})
-    return "Couldn't predict string"
+    return "Invalid file name"
 
 if __name__ == '__main__':
     app.run()
